@@ -50,6 +50,14 @@ SERVICE="$1"
 
 echo "$(date -Is) startup service $SERVICE"
 
+if test -f "/vault/secrets/config";
+then
+  echo start druid $SERVICE with injected /vault/secrets/config
+  source /vault/secrets/config
+else
+  echo start druid without injecting vault secrets
+fi
+
 # We put all the config in /tmp/conf to allow for a
 # read-only root filesystem
 mkdir -p /tmp/conf/

@@ -1,0 +1,105 @@
+trigger: none
+
+pr: none
+
+parameters: none
+
+variables:
+  - group: GBG Azure Unicorn FCS ACR
+  - group: GBG Azure Unicorn Project SSL VPN
+
+  - name: containerRegistryServiceConnection
+    value: AzDO-Unicorn-DockerRegistry-FCS
+  - name: helmArtefact
+    value: unicorn-druid
+  - name: azureSubscriptionEndpoint
+    value: Azure Resource Manager - Unicorn
+
+resources:
+  repositories:
+    - repository: unicorn-ado-pipelines
+      type: github
+      endpoint: AzDO-Unicorn-GitHub-PAT-MRV
+      name: gbgplc-internal/unicorn-ado-pipelines
+      ref: rapidash
+    - repository: templates
+      type: github
+      endpoint: AzDO-Unicorn-GitHub-PAT-MRV
+      name: gbgplc-internal/devops-pipeline-templates-ado
+      ref: refs/heads/main
+
+stages:
+  - stage: build_deploy_app
+    displayName: Build Unicorn Druid
+    jobs:
+      - job: calculateVersion
+        displayName: Calculate version number using GitVersion
+        steps:
+          - checkout: self
+            fetchDepth: 0
+
+          - task: gitversion/setup@0
+            displayName: Install GitVersion
+            inputs:
+              versionSpec: '5.x'
+
+          - task: gitversion/execute@0
+            displayName: Determine Version
+            name: Version
+
+          - script: |
+              echo Major: $(GitVersion.Major)
+              echo Minor: $(GitVersion.Minor)
+              echo Patch: $(GitVersion.Patch)
+              echo PreReleaseTag: $(GitVersion.PreReleaseTag)
+              echo PreReleaseTagWithDash: $(GitVersion.PreReleaseTagWithDash)
+              echo PreReleaseLabel: $(GitVersion.PreReleaseLabel)
+              echo PreReleaseNumber: $(GitVersion.PreReleaseNumber)
+              echo WeightedPreReleaseNumber: $(GitVersion.WeightedPreReleaseNumber)
+              echo BuildMetaData: $(GitVersion.BuildMetaData)
+              echo BuildMetaDataPadded: $(GitVersion.BuildMetaDataPadded)
+              echo FullBuildMetaData: $(GitVersion.FullBuildMetaData)
+              echo MajorMinorPatch: $(GitVersion.MajorMinorPatch)
+              echo SemVer: $(GitVersion.SemVer)
+              echo LegacySemVer: $(GitVersion.LegacySemVer)
+              echo LegacySemVerPadded: $(GitVersion.LegacySemVerPadded)
+              echo AssemblySemVer: $(GitVersion.AssemblySemVer)
+              echo AssemblySemFileVer: $(GitVersion.AssemblySemFileVer)
+              echo FullSemVer: $(GitVersion.FullSemVer)
+              echo InformationalVersion: $(GitVersion.InformationalVersion)
+              echo BranchName: $(GitVersion.BranchName)
+              echo EscapedBranchName: $(GitVersion.EscapedBranchName)
+              echo Sha: $(GitVersion.Sha)
+              echo ShortSha: $(GitVersion.ShortSha)
+              echo NuGetVersionV2: $(GitVersion.NuGetVersionV2)
+              echo NuGetVersion: $(GitVersion.NuGetVersion)
+              echo NuGetPreReleaseTagV2: $(GitVersion.NuGetPreReleaseTagV2)
+              echo NuGetPreReleaseTag: $(GitVersion.NuGetPreReleaseTag)
+              echo VersionSourceSha: $(GitVersion.VersionSourceSha)
+              echo CommitsSinceVersionSource: $(GitVersion.CommitsSinceVersionSource)
+              echo CommitsSinceVersionSourcePadded: $(GitVersion.CommitsSinceVersionSourcePadded)
+              echo UncommittedChanges: $(GitVersion.UncommittedChanges)
+              echo CommitDate: $(GitVersion.CommitDate)
+
+      - job: build
+        displayName: Java Build & Docker Push
+        dependsOn: calculateVersion
+        variables:
+          Ver.MajorMinorPatch: $[ dependencies.CalculateVersion.outputs['Version.GitVersion.MajorMinorPatch'] ]
+          Ver.BuildMetaData: $[ dependencies.CalculateVersion.outputs['Version.GitVersion.BuildMetaData'] ]
+          Ver.FullVer: $(Ver.MajorMinorPatch)-$(Ver.BuildMetaData)
+        steps:
+          - task: Docker@2
+            displayName: Build and Push docker image for Unicorn Druid
+            inputs:
+              command: buildAndPush
+              containerRegistry: ${{ variables.containerRegistryServiceConnection }}
+              dockerfile: '$(Build.SourcesDirectory)/distribution/docker/Dockerfile'
+              repository: unicorn/$(helmArtefact)
+              tags: |
+                $(Ver.FullVer)
+
+          - template: pipelines/templates/steps/artefact-publish/artefact_publish-devops-archive-1.yml@templates
+            parameters:
+              copyFilesSourceFolder: $(System.DefaultWorkingDirectory)
+              publishFolder: $(helmArtefact)
