@@ -3,8 +3,8 @@ trigger: none
 pr: none
 
 variables:
-  - group: GBG Azure Unicorn FCS ACR
-  - group: GBG Azure Unicorn Project SSL VPN
+  # - group: GBG Azure Unicorn FCS ACR
+  # - group: GBG Azure Unicorn Project SSL VPN
 
   - name: containerRegistryServiceConnection
     value: AzDO-Unicorn-DockerRegistry-FCS
@@ -15,11 +15,6 @@ variables:
 
 resources:
   repositories:
-    - repository: unicorn-ado-pipelines
-      type: github
-      endpoint: AzDO-Unicorn-GitHub-PAT-MRV
-      name: gbgplc-internal/unicorn-ado-pipelines
-      ref: rapidash
     - repository: templates
       type: github
       endpoint: AzDO-Unicorn-GitHub-PAT-MRV
