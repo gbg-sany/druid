@@ -2,8 +2,6 @@ trigger: none
 
 pr: none
 
-parameters: none
-
 variables:
   - group: GBG Azure Unicorn FCS ACR
   - group: GBG Azure Unicorn Project SSL VPN
