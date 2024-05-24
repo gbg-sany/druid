@@ -83,7 +83,7 @@ COPY --from=bash-static /bin/bash /bin/bash
 RUN chmod 755 /bin/bash
 
 COPY --chown=druid:druid --from=builder /opt /opt
-COPY distribution/docker/druid.sh /druid.sh
+COPY distribution/docker/druid.sh /run-druid.sh
 COPY distribution/docker/peon.sh /peon.sh
 
 # create necessary directories which could be mounted as volume
@@ -97,4 +97,4 @@ USER druid
 VOLUME /opt/druid/var
 WORKDIR /opt/druid
 
-ENTRYPOINT ["/druid.sh"]
+ENTRYPOINT ["/run-druid.sh"]
